@@ -1,0 +1,445 @@
+{% extends 'dashboard/base.html' %}
+{% load dashboard_extras %}
+
+{% block title %}CodePulse | My Dashboard{% endblock %}
+{% block header %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<!-- Header Actions -->
+<div class="header-actions mb-4" style="justify-content: flex-end; align-items: center; margin-bottom: 24px;">
+    <div style="display: flex; gap: 16px; align-items: center;">
+        <span class="text-muted" style="font-size: 13px;">
+            Last synced: <strong id="last-sync-time">{{ stats.last_synced|date:"h:i:s A" }}</strong>
+        </span>
+        <a href="{% url 'dashboard:sync_github' %}" id="sync-btn" class="btn btn-primary">
+            <i data-lucide="refresh-cw" id="sync-icon"></i>
+            <span id="sync-text">Sync Data</span>
+        </a>
+    </div>
+</div>
+
+<!-- High-Level Stats Grid -->
+<div class="stats-grid fade-in" style="margin-bottom: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px;">
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(255, 173, 71, 0.1); color: #F59E0B;">
+            <i data-lucide="package"></i>
+        </div>
+        <span class="stat-label">Total Repos</span>
+        <span class="stat-value">{{ repos_count|default:0 }}</span>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(148, 163, 184, 0.1); color: #64748B;">
+            <i data-lucide="git-pull-request"></i>
+        </div>
+        <span class="stat-label">Total PRs</span>
+        <span class="stat-value">{{ stats.total_prs|default:0 }}</span>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(148, 163, 184, 0.1); color: #64748B;">
+            <i data-lucide="git-merge"></i>
+        </div>
+        <span class="stat-label">Merged PRs</span>
+        <span class="stat-value">{{ stats.merged_prs|default:0 }}</span>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(148, 163, 184, 0.1); color: #64748B;">
+            <i data-lucide="check-circle"></i>
+        </div>
+        <span class="stat-label">Resolved Issues</span>
+        <span class="stat-value">{{ stats.resolved_issues|default:0 }}</span>
+    </div>
+</div>
+
+<!-- Chart & Streak Row -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 40px;">
+    <!-- Distribution Chart -->
+    <div class="card fade-in" style="display: flex; flex-direction: column; min-height: 400px;">
+        <h3 style="margin-bottom: 24px; font-size: 18px;">Contribution Distribution</h3>
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%;">
+            <div style="width: 100%; height: 300px;">
+                <canvas id="statsChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Streak & Insights Column -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="card streak-card-new" style="text-align: center;">
+            <div class="streak-icon-wrap">
+                <i data-lucide="flame"></i>
+            </div>
+            <h4 class="streak-label">Activity Streak</h4>
+            <span class="streak-value">{{ stats.streak_days|default:0 }} Days</span>
+        </div>
+        
+        {% if insights %}
+        <div class="card insights-card-new fade-in">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <div class="insight-badge">
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <span class="insight-header">Smart Insights</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for insight in insights|slice:":2" %}
+                <div class="insight-pill">
+                    <p>{{ insight }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Main Activity Sections (Top Toggles) -->
+<div style="border-top: 1px solid var(--border); padding-top: 40px; margin-bottom: 24px;">
+    <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+        <button class="nav-toggle-btn active" onclick="switchNav('prs')">
+            Pull Requests ({{ stats.total_prs|default:0 }})
+        </button>
+        <button class="nav-toggle-btn" onclick="switchNav('issues')">
+            Issues ({{ stats.total_issues|default:0 }})
+        </button>
+    </div>
+</div>
+
+<!-- PR SECTION -->
+<div id="pr-section">
+    <!-- Filter Tabs & Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div style="display: flex; gap: 8px; background: var(--bg); padding: 4px; border-radius: 12px;">
+            <button onclick="filterPRs('all')" id="tab-all" class="filter-tab active">All ({{ stats.total_prs|default:0 }})</button>
+            <button onclick="filterPRs('open')" id="tab-open" class="filter-tab">Open ({{ stats.open_prs|default:0 }})</button>
+            <button onclick="filterPRs('merged')" id="tab-merged" class="filter-tab">Merged ({{ stats.merged_prs|default:0 }})</button>
+            <button onclick="filterPRs('closed')" id="tab-closed" class="filter-tab">Closed ({{ stats.closed_prs|default:0 }})</button>
+        </div>
+        <a href="#" style="color: var(--primary); font-weight: 600; font-size: 14px; text-decoration: none;">+ Add PR manually</a>
+    </div>
+
+    <!-- PR List -->
+    <div id="pr-list" class="fade-in">
+        {% for pr in detailed_prs %}
+        <div class="pr-card" data-state="{{ pr.state }}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <a href="{{ pr.url }}" target="_blank" class="pr-title">{{ pr.title }}</a>
+                    <span class="badge badge-{{ pr.state }}">{{ pr.state|title }}</span>
+                </div>
+                <span class="text-muted pr-date" data-timestamp="{{ pr.created_at }}" style="font-size: 13px;"></span>
+            </div>
+            <div class="text-muted" style="font-size: 13px; font-weight: 500;">
+                {{ pr.repo }}
+            </div>
+        </div>
+        {% empty %}
+        <div class="card" style="text-align: center; padding: 48px; border-style: dashed;">
+            <p class="text-muted">No Pull Requests found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ISSUES SECTION -->
+<div id="issue-section" style="display: none;">
+    <div class="card" style="text-align: center; padding: 48px; border-style: dashed;">
+        <p class="text-muted">Detailed Issue tracking coming soon. Total: {{ stats.total_issues|default:0 }}</p>
+    </div>
+</div>
+
+<style>
+    /* Premium Streak Card */
+    .streak-card-new {
+        background: #FFF7ED;
+        border: 1px solid #FFEDD5;
+        padding: 32px 24px !important;
+    }
+    body.dark .streak-card-new {
+        background: rgba(251, 146, 60, 0.05);
+        border-color: rgba(251, 146, 60, 0.1);
+    }
+    .streak-icon-wrap {
+        background: #F97316;
+        color: white;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+    .streak-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #9A3412;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+    }
+    body.dark .streak-label { color: #FB923C; }
+    .streak-value {
+        font-size: 28px;
+        font-weight: 800;
+        color: #7C2D12;
+    }
+    body.dark .streak-value { color: #FFEDD5; }
+
+    /* Premium Insights Card */
+    .insights-card-new {
+        padding: 24px !important;
+        background: linear-gradient(145deg, var(--card), var(--bg));
+    }
+    .insight-badge {
+        background: rgba(79, 70, 229, 0.1);
+        color: #4F46E5;
+        padding: 8px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .insight-badge i { width: 16px; height: 16px; }
+    .insight-header {
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+    }
+    .insight-pill {
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 14px 18px;
+        border-radius: 14px;
+        transition: all 0.2s;
+    }
+    .insight-pill:hover {
+        transform: translateX(6px);
+        border-color: #4F46E5;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+    }
+    .insight-pill p {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    /* Stat Icon Visibility Fix */
+    .stat-icon {
+        background: rgba(148, 163, 184, 0.1) !important;
+        color: #64748B !important;
+    }
+    body.dark .stat-icon {
+        background: rgba(148, 163, 184, 0.2) !important;
+        color: #94A3B8 !important; /* Visible Gray */
+    }
+
+    /* PR Title Hover */
+    .pr-title:hover {
+        color: #4F46E5 !important;
+        text-decoration: underline !important;
+    }
+    /* Toggle Buttons */
+    .nav-toggle-btn {
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-muted);
+        transition: all 0.2s;
+    }
+    .nav-toggle-btn.active {
+        background: #FFFFFF;
+        color: var(--text);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid #E2E8F0;
+    }
+    body.dark .nav-toggle-btn.active {
+        background: #1E293B;
+        border-color: #334155;
+    }
+
+    /* Filter Tabs */
+    .filter-tab {
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+    }
+    .filter-tab.active {
+        background: #E0E7FF;
+        color: #4F46E5;
+    }
+    body.dark .filter-tab.active {
+        background: rgba(79, 70, 229, 0.2);
+        color: #818CF8;
+    }
+
+    /* PR Cards */
+    .pr-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 12px;
+        transition: all 0.2s;
+    }
+    .pr-card:hover {
+        border-color: #CBD5E1;
+    }
+    body.dark .pr-card:hover {
+        border-color: #475569;
+    }
+    .pr-title {
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--text);
+        text-decoration: none;
+        line-height: 1.4;
+    }
+
+    /* Badges */
+    .badge {
+        padding: 4px 12px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: capitalize;
+    }
+    .badge-open { background: #DCFCE7; color: #166534; }
+    .badge-merged { background: #F3E8FF; color: #6B21A8; }
+    .badge-closed { background: #F1F5F9; color: #475569; }
+    
+    body.dark .badge-open { background: rgba(22, 101, 52, 0.2); color: #4ADE80; }
+    body.dark .badge-merged { background: rgba(107, 33, 168, 0.2); color: #C084FC; }
+    body.dark .badge-closed { background: #334155; color: #94A3B8; }
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Time-Ago Formatting
+    function formatTimeAgo(dateString) {
+        const now = new Date();
+        const date = new Date(dateString);
+        const seconds = Math.floor((now - date) / 1000);
+        
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + "y ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + "mo ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + "d ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + "h ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + "m ago";
+        return Math.floor(seconds) + "s ago";
+    }
+
+    document.querySelectorAll('.pr-date').forEach(el => {
+        const timestamp = el.getAttribute('data-timestamp');
+        if (timestamp) el.innerText = formatTimeAgo(timestamp);
+    });
+
+    // Navigation and Filtering
+    function switchNav(type) {
+        document.querySelectorAll('.nav-toggle-btn').forEach(btn => btn.classList.remove('active'));
+        const btn = event.target.closest('.nav-toggle-btn');
+        if (btn) btn.classList.add('active');
+        
+        if (type === 'prs') {
+            document.getElementById('pr-section').style.display = 'block';
+            document.getElementById('issue-section').style.display = 'none';
+        } else {
+            document.getElementById('pr-section').style.display = 'none';
+            document.getElementById('issue-section').style.display = 'block';
+        }
+    }
+
+    function filterPRs(state) {
+        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(`tab-${state}`).classList.add('active');
+        
+        const cards = document.querySelectorAll('.pr-card');
+        cards.forEach(card => {
+            if (state === 'all' || card.getAttribute('data-state') === state) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Chart Configuration
+    {% if stats %}
+    const colors = {
+        primary: '#FFAD47',
+        cyan: '#06B6D4',
+        green: '#10B981',
+        indigo: '#4F46E5',
+        slate: '#94A3B8'
+    };
+
+    const isDark = document.body.classList.contains('dark');
+    const gridColor = isDark ? '#334155' : '#E2E8F0';
+    const textColor = isDark ? '#94A3B8' : '#64748B';
+
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Total Repos', 'Total PRs', 'Merged PRs', 'Issues'],
+            datasets: [{
+                data: [{{ repos_count|default:0 }}, {{ stats.total_prs|default:0 }}, {{ stats.merged_prs|default:0 }}, {{ stats.total_issues|default:0 }}],
+                backgroundColor: [colors.primary, colors.indigo, colors.green, colors.cyan],
+                borderRadius: 8,
+                barThickness: 35
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: gridColor, borderDash: [5, 5] },
+                    ticks: { color: textColor }
+                },
+                x: { 
+                    grid: { display: false },
+                    ticks: { color: textColor }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // Loading Spin
+    const syncBtn = document.getElementById('sync-btn');
+    const syncIcon = document.getElementById('sync-icon');
+    const syncText = document.getElementById('sync-text');
+
+    if (syncBtn) {
+        syncBtn.addEventListener('click', () => {
+            if (syncIcon) syncIcon.classList.add('loading-spinner');
+            if (syncText) syncText.innerText = 'Syncing...';
+        });
+    }
+</script>
+{% endblock %}

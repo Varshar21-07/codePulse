@@ -1,0 +1,51 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}CodePulse | Leaderboard{% endblock %}
+{% block header %}Community Leaderboard{% endblock %}
+
+{% block content %}
+<div class="card fade-in" style="max-width: 900px; margin: 0 auto; padding: 40px;">
+    <div style="text-align: center; margin-bottom: 40px;">
+        <i data-lucide="trophy" style="width: 48px; height: 48px; color: var(--warning); margin-bottom: 16px;"></i>
+        <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Top Contributors</h2>
+        <p style="color: var(--text-muted); margin-top: 8px;">Ranked by merged Pull Requests and total impact.</p>
+    </div>
+    
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                    <th style="padding: 16px 8px; width: 80px; color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Rank</th>
+                    <th style="padding: 16px; color: var(--text-muted); font-size: 12px; text-transform: uppercase;">User</th>
+                    <th style="padding: 16px; text-align: right; color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Merged PRs</th>
+                    <th style="padding: 16px; text-align: right; color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Productivity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in top_users %}
+                <tr style="border-bottom: 1px solid var(--border); transition: all 0.2s;">
+                    <td style="padding: 20px 8px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; 
+                            {% if forloop.counter == 1 %}background: var(--warning); color: white;{% elif forloop.counter == 2 %}background: #CBD5E1; color: var(--text);{% elif forloop.counter == 3 %}background: #D97706; color: white;{% else %}background: var(--bg); color: var(--text-muted);{% endif %}">
+                            {{ forloop.counter }}
+                        </div>
+                    </td>
+                    <td style="padding: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">
+                                {{ s.user.username|slice:":1"|upper }}
+                            </div>
+                            <span style="font-weight: 600;">@{{ s.user.github_username }}</span>
+                        </div>
+                    </td>
+                    <td style="padding: 20px; text-align: right;">
+                        <span style="font-weight: 800; color: var(--success); font-size: 18px;">{{ s.merged_prs }}</span>
+                    </td>
+                    <td style="padding: 20px; text-align: right; font-weight: 800; font-size: 18px;">{{ s.productivity_score|floatformat:1 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

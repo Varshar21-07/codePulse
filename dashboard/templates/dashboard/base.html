@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CodePulse | GitHub Analytics{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="light">
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i data-lucide="activity" style="color: var(--primary);"></i>
+                <span>CodePulse</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="{% url 'dashboard:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'dashboard:leaderboard' %}" class="nav-item {% if request.resolver_match.url_name == 'leaderboard' %}active{% endif %}">
+                    <i data-lucide="talle-chart"></i>
+                    <span>Leaderboard</span>
+                </a>
+                {% if user.role == 'admin' or user.is_superuser %}
+                <a href="{% url 'dashboard:admin_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                    <i data-lucide="shield-check"></i>
+                    <span>Admin Panel</span>
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="theme-toggle" class="nav-item" style="background: none; border: none; width: 100%; cursor: pointer; text-align: left;">
+                    <i data-lucide="moon"></i>
+                    <span>Dark Mode</span>
+                </button>
+                <a href="{% url 'dashboard:logout' %}" class="nav-item" style="color: var(--error);">
+                    <i data-lucide="log-out"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-layout">
+            <header class="fade-in">
+                <div class="header-title">
+                    <h1>{% block header %}{% endblock %}</h1>
+                </div>
+                <div class="header-actions">
+                    <div class="user-meta" style="display: flex; align-items: center; gap: 12px;">
+                        <span style="color: var(--text-muted); font-size: 14px;">Welcome back,</span>
+                        <span style="font-weight: 700;">{{ user.username }}</span>
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800;">
+                            {{ user.username|slice:":1"|upper }}
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="content-body fade-in">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        const body = document.body;
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        body.className = savedTheme;
+
+        themeToggle.addEventListener('click', () => {
+            if (body.classList.contains('light')) {
+                body.className = 'dark';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.className = 'light';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

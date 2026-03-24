@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CodePulse | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: radial-gradient(circle at top right, #4f46e5, #1e1b4b);
+            color: white;
+            overflow: hidden;
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 48px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.8s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo-wrap {
+            background: linear-gradient(135deg, #4f46e5, #0ea5e9);
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+        }
+        h1 { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+        p { color: #94a3b8; margin-bottom: 40px; font-size: 15px; line-height: 1.5; }
+        
+        .btn-github {
+            background: #ffffff;
+            color: #0f172a;
+            font-weight: 700;
+            padding: 14px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.2s;
+            margin-bottom: 16px;
+        }
+        .btn-github:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
+        
+        .btn-admin {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-weight: 600;
+            padding: 14px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-admin:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo-wrap">
+            <i data-lucide="activity" style="width: 32px; height: 32px;"></i>
+        </div>
+        <h1>CodePulse</h1>
+        <p>Analyze your GitHub contributions with a premium, data-driven experience.</p>
+        
+        <a href="{{ auth_url }}" class="btn-github">
+            <i data-lucide="github" style="width: 20px; height: 20px;"></i>
+            Login with GitHub
+        </a>
+        
+        <a href="/admin/login/?next={% url 'dashboard:admin_dashboard' %}" class="btn-admin">
+            <i data-lucide="shield" style="width: 20px; height: 20px;"></i>
+            Admin Portal
+        </a>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

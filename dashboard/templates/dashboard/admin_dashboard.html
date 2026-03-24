@@ -1,0 +1,109 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}CodePulse | Admin Panel{% endblock %}
+{% block header %}Admin Control Panel{% endblock %}
+
+{% block content %}
+<div class="stats-grid fade-in" style="margin-bottom: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: #4F46E5;">
+            <i data-lucide="users"></i>
+        </div>
+        <span class="stat-label">Total Users</span>
+        <span class="stat-value">{{ global_stats.total_users }}</span>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(249, 115, 22, 0.1); color: #F97316;">
+            <i data-lucide="git-pull-request"></i>
+        </div>
+        <span class="stat-label">Global PRs</span>
+        <span class="stat-value">{{ global_stats.total_prs }}</span>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10B981;">
+            <i data-lucide="check-circle"></i>
+        </div>
+        <span class="stat-label">Global Merged</span>
+        <span class="stat-value">{{ global_stats.total_merged }}</span>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- User Directory -->
+    <div class="card fade-in">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="padding: 8px; background: rgba(79, 70, 229, 0.1); border-radius: 10px; color: #4F46E5;">
+                    <i data-lucide="database" style="width: 20px; height: 20px;"></i>
+                </div>
+                <h3 style="font-size: 18px; font-weight: 800;">User Directory</h3>
+            </div>
+            <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">{{ users.count }} Registered</span>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                        <th style="padding: 16px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">User</th>
+                        <th style="padding: 16px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Merged</th>
+                        <th style="padding: 16px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Productivity</th>
+                        <th style="padding: 16px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr style="border-bottom: 1px solid var(--border); transition: all 0.2s;">
+                        <td style="padding: 16px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--primary); font-size: 12px;">
+                                    {{ u.username|slice:":1"|upper }}
+                                </div>
+                                <div style="display: flex; flex-direction: column;">
+                                    <span style="font-weight: 700; font-size: 14px;">{{ u.username }}</span>
+                                    <span style="font-size: 12px; color: var(--text-muted);">@{{ u.github_username }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 16px;">
+                            <span style="font-weight: 800; color: var(--success);">{{ u.stats.first.merged_prs|default:0 }}</span>
+                        </td>
+                        <td style="padding: 16px; font-weight: 800;">{{ u.stats.first.productivity_score|default:0|floatformat:1 }}</td>
+                        <td style="padding: 16px;">
+                            <button style="border: none; background: transparent; color: var(--text-muted); cursor: pointer;" title="View Details">
+                                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Leaderboard -->
+    <div class="card fade-in" style="background: linear-gradient(135deg, var(--card), var(--bg));">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+            <div style="padding: 8px; background: rgba(245, 158, 11, 0.1); border-radius: 10px; color: #F59E0B;">
+                <i data-lucide="award" style="width: 20px; height: 20px;"></i>
+            </div>
+            <h3 style="font-size: 18px; font-weight: 800;">Top Performers</h3>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            {% for s in top_users %}
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-weight: 800; color: var(--text-muted); font-size: 14px; width: 20px;">{{ forloop.counter }}</span>
+                    <span style="font-weight: 700; font-size: 13px;">@{{ s.user.github_username }}</span>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 800; color: var(--primary); font-size: 14px;">{{ s.merged_prs }}</div>
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Merged</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
