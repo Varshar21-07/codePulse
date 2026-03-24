@@ -17,7 +17,7 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard:dashboard')
     
-    auth_url = get_github_auth_url()
+    auth_url = get_github_auth_url(request)
     return render(request, 'dashboard/login.html', {'auth_url': auth_url})
 
 def github_callback(request):

@@ -1,9 +1,9 @@
 import requests
 from django.conf import settings
 
-def get_github_auth_url():
+def get_github_auth_url(request):
     client_id = settings.GITHUB_CLIENT_ID
-    redirect_uri = "http://127.0.0.1:8000/github/callback/"
+    redirect_uri = request.build_absolute_uri('/github/callback/')
     scope = "repo,user,read:org"
     return f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}"
 
